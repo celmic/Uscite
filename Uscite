@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contatore Uscite dalla Stanza</title>
+    <!-- Caricamento di Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Caricamento del font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Caricamento di Lucide Icons per le icone -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Animazione leggera per il cambio numero */
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+        .animate-pop {
+            animation: pop 0.2s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col justify-between transition-colors duration-200">
+
+    <!-- Intestazione -->
+    <header class="w-full max-w-4xl mx-auto pt-8 pb-4 px-4 sm:px-6 text-center">
+        <div class="inline-flex items-center justify-center gap-2 px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold tracking-wide uppercase mb-3">
+            <i data-lucide="door-open" class="w-4 h-4"></i>
+            Monitoraggio Presenze
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Fuori dalla Stanza
+        </h1>
+        <p class="mt-2 text-sm sm:text-base text-slate-500 dark:text-slate-400">
+            Usa i pulsanti <span class="font-bold text-slate-700 dark:text-slate-200">+</span> e <span class="font-bold text-slate-700 dark:text-slate-200">-</span> per aggiornare chi entra ed esce.
+        </p>
+    </header>
+
+    <!-- Contenuto Principale -->
+    <main class="w-full max-w-4xl mx-auto px-4 sm:px-6 my-auto py-4">
+        
+        <!-- Riepilogo Totale -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                    <i data-lucide="users" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h2 class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Totale Fuori</h2>
+                    <p class="text-xs text-slate-400 dark:text-slate-500">Somma complessiva attuale</p>
+                </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+                <span id="total-count" class="text-5xl font-extrabold text-slate-900 dark:text-white tabular-nums">0</span>
+                <span class="text-sm font-medium text-slate-500 dark:text-slate-400" id="total-label">persone</span>
+            </div>
+        </div>
+
+        <!-- Griglia Contatori (Femmine e Maschi) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Scheda Femmine -->
+            <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-md border-2 border-pink-100 dark:border-pink-950/60 p-6 sm:p-8 flex flex-col items-center justify-between transition-all hover:shadow-lg">
+                <div class="w-full flex items-center justify-between mb-4">
+                    <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-pink-50 dark:bg-pink-950/50 text-pink-600 dark:text-pink-400 font-semibold text-sm">
+                        <span class="w-2.5 h-2.5 rounded-full bg-pink-500"></span>
+                        Femmine
+                    </span>
+                    <button onclick="resetSingle('female')" title="Azzera Femmine" class="p-2 rounded-xl text-slate-400 hover:text-pink-600 hover:bg-pink-50 dark:hover:bg-pink-950/40 transition-colors">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- Numero Conteggio Femmine -->
+                <div class="my-6 text-center">
+                    <div id="female-count" class="text-7xl sm:text-8xl font-extrabold text-pink-600 dark:text-pink-400 tabular-nums select-none">
+                        0
+                    </div>
+                    <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mt-2 uppercase tracking-widest">
+                        Fuori ora
+                    </p>
+                </div>
+
+                <!-- Pulsanti - e + Femmine -->
+                <div class="w-full grid grid-cols-2 gap-4 mt-2">
+                    <button onclick="updateCount('female', -1)" id="btn-female-minus" aria-label="Togli una femmina"
+                        class="h-16 sm:h-20 rounded-2xl bg-pink-50 hover:bg-pink-100 active:scale-95 dark:bg-pink-950/40 dark:hover:bg-pink-900/60 text-pink-700 dark:text-pink-300 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none border border-pink-200/60 dark:border-pink-800/50">
+                        <i data-lucide="minus" class="w-8 h-8 stroke-[2.5]"></i>
+                    </button>
+                    <button onclick="updateCount('female', 1)" aria-label="Aggiungi una femmina"
+                        class="h-16 sm:h-20 rounded-2xl bg-pink-600 hover:bg-pink-500 active:scale-95 text-white shadow-md shadow-pink-600/20 flex items-center justify-center transition-all">
+                        <i data-lucide="plus" class="w-8 h-8 stroke-[2.5]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scheda Maschi -->
+            <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-md border-2 border-blue-100 dark:border-blue-950/60 p-6 sm:p-8 flex flex-col items-center justify-between transition-all hover:shadow-lg">
+                <div class="w-full flex items-center justify-between mb-4">
+                    <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                        Maschi
+                    </span>
+                    <button onclick="resetSingle('male')" title="Azzera Maschi" class="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- Numero Conteggio Maschi -->
+                <div class="my-6 text-center">
+                    <div id="male-count" class="text-7xl sm:text-8xl font-extrabold text-blue-600 dark:text-blue-400 tabular-nums select-none">
+                        0
+                    </div>
+                    <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mt-2 uppercase tracking-widest">
+                        Fuori ora
+                    </p>
+                </div>
+
+                <!-- Pulsanti - e + Maschi -->
+                <div class="w-full grid grid-cols-2 gap-4 mt-2">
+                    <button onclick="updateCount('male', -1)" id="btn-male-minus" aria-label="Togli un maschio"
+                        class="h-16 sm:h-20 rounded-2xl bg-blue-50 hover:bg-blue-100 active:scale-95 dark:bg-blue-950/40 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none border border-blue-200/60 dark:border-blue-800/50">
+                        <i data-lucide="minus" class="w-8 h-8 stroke-[2.5]"></i>
+                    </button>
+                    <button onclick="updateCount('male', 1)" aria-label="Aggiungi un maschio"
+                        class="h-16 sm:h-20 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white shadow-md shadow-blue-600/20 flex items-center justify-center transition-all">
+                        <i data-lucide="plus" class="w-8 h-8 stroke-[2.5]"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Barra Azioni Inferiore -->
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <button onclick="openResetModal()" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-200/80 hover:bg-slate-300/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-sm transition-colors">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                Azzera Tutto
+            </button>
+            <button onclick="copySummary()" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium text-sm transition-colors">
+                <i data-lucide="copy" class="w-4 h-4"></i>
+                Copia Riepilogo
+            </button>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full text-center py-6 text-xs text-slate-400 dark:text-slate-600">
+        I dati vengono salvati automaticamente sul dispositivo.
+    </footer>
+
+    <!-- Modale di Conferma Azzera Tutto (Sostituisce confirm()) -->
+    <div id="reset-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-xl border border-slate-200 dark:border-slate-800 transform transition-all">
+            <div class="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center mb-4">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">Azzerare tutti i conteggi?</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Sia il numero delle femmine che quello dei maschi tornerà a 0.
+            </p>
+            <div class="grid grid-cols-2 gap-3 mt-6">
+                <button onclick="closeResetModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-sm transition-colors">
+                    Annulla
+                </button>
+                <button onclick="confirmResetAll()" class="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium text-sm transition-colors">
+                    Sì, Azzera
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifica Toast (Sostituisce alert()) -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-medium shadow-lg transition-all">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 dark:text-emerald-600"></i>
+        <span id="toast-message">Operazione completata</span>
+    </div>
+
+    <script>
+        // Stato iniziale dei contatori
+        let counts = {
+            female: 0,
+            male: 0
+        };
+
+        // Inizializzazione al caricamento della pagina
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            loadFromStorage();
+            render();
+        });
+
+        // Carica i dati salvati in localStorage se presenti
+        function loadFromStorage() {
+            try {
+                const saved = localStorage.getItem('room_exit_counts');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    counts.female = Math.max(0, parseInt(parsed.female) || 0);
+                    counts.male = Math.max(0, parseInt(parsed.male) || 0);
+                }
+            } catch (e) {
+                console.error("Errore nel caricamento dei dati:", e);
+            }
+        }
+
+        // Salva i dati in localStorage
+        function saveToStorage() {
+            try {
+                localStorage.setItem('room_exit_counts', JSON.stringify(counts));
+            } catch (e) {
+                console.error("Errore nel salvataggio dei dati:", e);
+            }
+        }
+
+        // Aggiorna il conteggio (+1 o -1)
+        function updateCount(gender, delta) {
+            const newValue = counts[gender] + delta;
+            if (newValue < 0) return; // Impedisce numeri negativi
+
+            counts[gender] = newValue;
+            saveToStorage();
+            render(gender);
+        }
+
+        // Azzera solo una categoria
+        function resetSingle(gender) {
+            if (counts[gender] === 0) return;
+            counts[gender] = 0;
+            saveToStorage();
+            render(gender);
+            showToast(gender === 'female' ? 'Conteggio femmine azzerato' : 'Conteggio maschi azzerato');
+        }
+
+        // Aggiorna l'interfaccia grafica
+        function render(animatedGender = null) {
+            const femaleEl = document.getElementById('female-count');
+            const maleEl = document.getElementById('male-count');
+            const totalEl = document.getElementById('total-count');
+            const totalLabel = document.getElementById('total-label');
+            
+            const btnFemaleMinus = document.getElementById('btn-female-minus');
+            const btnMaleMinus = document.getElementById('btn-male-minus');
+
+            // Aggiorna i testi numerici
+            femaleEl.textContent = counts.female;
+            maleEl.textContent = counts.male;
+
+            const total = counts.female + counts.male;
+            totalEl.textContent = total;
+            totalLabel.textContent = total === 1 ? 'persona' : 'persone';
+
+            // Disabilita il tasto "-" se il valore è 0
+            btnFemaleMinus.disabled = counts.female === 0;
+            btnMaleMinus.disabled = counts.male === 0;
+
+            // Applica animazione "pop" sul numero modificato
+            if (animatedGender) {
+                const targetEl = animatedGender === 'female' ? femaleEl : maleEl;
+                targetEl.classList.remove('animate-pop');
+                void targetEl.offsetWidth; // Forza reflow per riavviare l'animazione
+                targetEl.classList.add('animate-pop');
+            }
+        }
+
+        // Gestione modale di conferma reset
+        function openResetModal() {
+            if (counts.female === 0 && counts.male === 0) {
+                showToast('I contatori sono già a zero');
+                return;
+            }
+            const modal = document.getElementById('reset-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeResetModal() {
+            const modal = document.getElementById('reset-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function confirmResetAll() {
+            counts.female = 0;
+            counts.male = 0;
+            saveToStorage();
+            render();
+            closeResetModal();
+            showToast('Tutti i conteggi sono stati azzerati');
+        }
+
+        // Copia un riepilogo testuale negli appunti
+        function copySummary() {
+            const total = counts.female + counts.male;
+            const text = `Fuori dalla stanza: ${total} totali (${counts.female} Femmine, ${counts.male} Maschi)`;
+            
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Riepilogo copiato negli appunti!');
+            } catch (err) {
+                showToast('Impossibile copiare il testo');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // Mostra una notifica temporanea in basso
+        let toastTimeout;
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            
+            toastMsg.textContent = message;
+            toast.classList.remove('hidden');
+            toast.classList.add('flex');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('flex');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
