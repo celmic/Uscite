@@ -31,14 +31,14 @@
     <!-- Intestazione -->
     <header class="w-full max-w-4xl mx-auto pt-8 pb-4 px-4 sm:px-6 text-center">
         <div class="inline-flex items-center justify-center gap-2 px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold tracking-wide uppercase mb-3">
-            <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-            <span id="sync-status">Connessione in corso...</span>
+            <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+            Monitoraggio Stanza
         </div>
         <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Fuori dalla Stanza
         </h1>
         <p class="mt-2 text-sm sm:text-base text-slate-500 dark:text-slate-400">
-            Conteggio condiviso in tempo reale per tutti i dispositivi collegati.
+            Segna in tempo reale quante persone sono attualmente uscite.
         </p>
     </header>
 
@@ -152,10 +152,10 @@
 
     <!-- Footer -->
     <footer class="w-full text-center py-6 text-xs text-slate-400 dark:text-slate-600">
-        Sincronizzazione live attiva • I dati sono condivisi tra tutti gli utenti.
+        Salvataggio automatico attivo • I dati restano memorizzati sul dispositivo.
     </footer>
 
-    <!-- Modale di Conferma Azzera Tutto (Sostituisce confirm()) -->
+    <!-- Modale di Conferma Azzera Tutto -->
     <div id="reset-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
         <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-xl border border-slate-200 dark:border-slate-800 transform transition-all">
             <div class="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center mb-4">
@@ -176,124 +176,67 @@
         </div>
     </div>
 
-    <!-- Notifica Toast (Sostituisce alert()) -->
+    <!-- Notifica Toast -->
     <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-medium shadow-lg transition-all">
         <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 dark:text-emerald-600"></i>
         <span id="toast-message">Operazione completata</span>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Configurazione e inizializzazione database cloud
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // Stato dei contatori e dell'utente
+    <script>
+        // Stato iniziale dei contatori
         let counts = {
             female: 0,
             male: 0
         };
-        let currentUser = null;
-        let counterDocRef = null;
+
+        const STORAGE_KEY = 'contatore_uscite_stanza_v1';
 
         // Inizializzazione al caricamento della pagina
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
+            loadFromStorage();
             render();
-            await initCloudSync();
         });
 
-        // Autenticazione e ascolto in tempo reale del documento condiviso
-        async function initCloudSync() {
+        // Carica i dati salvati dal localStorage
+        function loadFromStorage() {
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    const cred = await signInWithCustomToken(auth, __initial_auth_token);
-                    currentUser = cred.user;
-                } else {
-                    const cred = await signInAnonymously(auth);
-                    currentUser = cred.user;
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    counts.female = Math.max(0, parseInt(parsed.female, 10) || 0);
+                    counts.male = Math.max(0, parseInt(parsed.male, 10) || 0);
                 }
-
-                if (!currentUser) return;
-
-                // Percorso pubblico condiviso da tutti gli utenti dell'app
-                counterDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'room_status', 'shared_counter');
-
-                onSnapshot(counterDocRef, (snapshot) => {
-                    updateSyncIndicator(true);
-                    if (snapshot.exists()) {
-                        const data = snapshot.data();
-                        const newFemale = Math.max(0, Number(data.female) || 0);
-                        const newMale = Math.max(0, Number(data.male) || 0);
-
-                        const changedGender = newFemale !== counts.female ? 'female' : (newMale !== counts.male ? 'male' : null);
-                        counts.female = newFemale;
-                        counts.male = newMale;
-                        render(changedGender);
-                    } else {
-                        // Crea il documento iniziale se non esiste ancora
-                        setDoc(counterDocRef, { female: 0, male: 0 }, { merge: true });
-                    }
-                }, (error) => {
-                    console.error("Errore sincronizzazione:", error);
-                    updateSyncIndicator(false);
-                });
-            } catch (err) {
-                console.error("Errore di connessione:", err);
-                updateSyncIndicator(false);
+            } catch (e) {
+                console.error('Errore nel caricamento dei dati salvati:', e);
             }
         }
 
-        // Aggiorna il badge di stato connessione in alto
-        function updateSyncIndicator(isOnline) {
-            const dot = document.getElementById('sync-dot');
-            const status = document.getElementById('sync-status');
-            if (isOnline) {
-                dot.className = "w-2 h-2 rounded-full bg-emerald-500";
-                status.textContent = "Online • Condiviso Live";
-            } else {
-                dot.className = "w-2 h-2 rounded-full bg-red-500";
-                status.textContent = "Offline • Riconnessione...";
+        // Salva i dati nel localStorage
+        function saveToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(counts));
+            } catch (e) {
+                console.error('Errore nel salvataggio dei dati:', e);
             }
         }
 
-        // Aggiorna il conteggio (+1 o -1) sul cloud in modo atomico
-        window.updateCount = async function(gender, delta) {
-            if (!currentUser || !counterDocRef) {
-                showToast('Attendi la connessione...');
-                return;
-            }
+        // Aggiorna il conteggio (+1 o -1)
+        function updateCount(gender, delta) {
             if (counts[gender] + delta < 0) return;
+            counts[gender] += delta;
+            saveToStorage();
+            render(gender);
+        }
 
-            try {
-                await setDoc(counterDocRef, {
-                    [gender]: increment(delta)
-                }, { merge: true });
-            } catch (e) {
-                console.error("Errore aggiornamento:", e);
-                showToast('Errore di rete, riprova');
-            }
-        };
-
-        // Azzera solo una categoria per tutti
-        window.resetSingle = async function(gender) {
-            if (!currentUser || !counterDocRef || counts[gender] === 0) return;
-            try {
-                await setDoc(counterDocRef, {
-                    [gender]: 0
-                }, { merge: true });
-                showToast(gender === 'female' ? 'Conteggio femmine azzerato' : 'Conteggio maschi azzerato');
-            } catch (e) {
-                console.error("Errore azzeramento:", e);
-                showToast('Errore di rete, riprova');
-            }
-        };
+        // Azzera solo una categoria
+        function resetSingle(gender) {
+            if (counts[gender] === 0) return;
+            counts[gender] = 0;
+            saveToStorage();
+            render(gender);
+            showToast(gender === 'female' ? 'Conteggio femmine azzerato' : 'Conteggio maschi azzerato');
+        }
 
         // Aggiorna l'interfaccia grafica
         function render(animatedGender = null) {
@@ -305,7 +248,6 @@
             const btnFemaleMinus = document.getElementById('btn-female-minus');
             const btnMaleMinus = document.getElementById('btn-male-minus');
 
-            // Aggiorna i testi numerici
             femaleEl.textContent = counts.female;
             maleEl.textContent = counts.male;
 
@@ -313,21 +255,19 @@
             totalEl.textContent = total;
             totalLabel.textContent = total === 1 ? 'persona' : 'persone';
 
-            // Disabilita il tasto "-" se il valore è 0
             btnFemaleMinus.disabled = counts.female === 0;
             btnMaleMinus.disabled = counts.male === 0;
 
-            // Applica animazione "pop" sul numero modificato
             if (animatedGender) {
                 const targetEl = animatedGender === 'female' ? femaleEl : maleEl;
                 targetEl.classList.remove('animate-pop');
-                void targetEl.offsetWidth; // Forza reflow per riavviare l'animazione
+                void targetEl.offsetWidth;
                 targetEl.classList.add('animate-pop');
             }
         }
 
         // Gestione modale di conferma reset
-        window.openResetModal = function() {
+        function openResetModal() {
             if (counts.female === 0 && counts.male === 0) {
                 showToast('I contatori sono già a zero');
                 return;
@@ -335,28 +275,25 @@
             const modal = document.getElementById('reset-modal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-        };
+        }
 
-        window.closeResetModal = function() {
+        function closeResetModal() {
             const modal = document.getElementById('reset-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
-        };
+        }
 
-        window.confirmResetAll = async function() {
-            if (!currentUser || !counterDocRef) return;
-            try {
-                await setDoc(counterDocRef, { female: 0, male: 0 }, { merge: true });
-                closeResetModal();
-                showToast('Tutti i conteggi sono stati azzerati');
-            } catch (e) {
-                console.error("Errore reset totale:", e);
-                showToast('Errore di rete, riprova');
-            }
-        };
+        function confirmResetAll() {
+            counts.female = 0;
+            counts.male = 0;
+            saveToStorage();
+            render();
+            closeResetModal();
+            showToast('Tutti i conteggi sono stati azzerati');
+        }
 
         // Copia un riepilogo testuale negli appunti
-        window.copySummary = function() {
+        function copySummary() {
             const total = counts.female + counts.male;
             const text = `Fuori dalla stanza: ${total} totali (${counts.female} Femmine, ${counts.male} Maschi)`;
             
@@ -371,7 +308,7 @@
                 showToast('Impossibile copiare il testo');
             }
             document.body.removeChild(textArea);
-        };
+        }
 
         // Mostra una notifica temporanea in basso
         let toastTimeout;
@@ -379,4 +316,16 @@
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-message');
             
-    
+            toastMsg.textContent = message;
+            toast.classList.remove('hidden');
+            toast.classList.add('flex');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('flex');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
